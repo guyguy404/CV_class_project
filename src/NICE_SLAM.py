@@ -1,27 +1,26 @@
+from src.Tracker import Tracker
+from src.utils.Logger import Logger
+from src.utils.Renderer import Renderer
+from src.utils.Mesher import Mesher
+from src.Mapper import Mapper, VoxelHashingMap
+from src.utils.datasets import get_dataset
+from src.utils.VoxelHashingMap import VoxelHashingMap
+from src import config
 import os
 import time
-
 import numpy as np
 import torch
-import torch.multiprocessing
 import torch.multiprocessing as mp
-
-from src import config
-from src.Mapper import Mapper
-from src.Tracker import Tracker
-from src.utils.datasets import get_dataset
-from src.utils.Logger import Logger
-from src.utils.Mesher import Mesher
-from src.utils.Renderer import Renderer
+import torch.multiprocessing
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 class NICE_SLAM():
-    """
-    NICE_SLAM main class.
+    '''  NICE_SLAM main class.
+
     Mainly allocate shared resources, and dispatch mapping and tracking process.
-    """
+    '''
 
     def __init__(self, cfg, args):
 
@@ -35,6 +34,9 @@ class NICE_SLAM():
         self.verbose = cfg['verbose']
         self.dataset = cfg['dataset']
         self.coarse_bound_enlarge = cfg['model']['coarse_bound_enlarge']
+        #TODO: Change to config
+        self.grid_init_size = 2400
+
         if args.output is None:
             self.output = cfg['data']['output']
         else:
@@ -101,12 +103,12 @@ class NICE_SLAM():
         print(f"INFO: The output folder is {self.output}")
         if 'Demo' in self.output:
             print(
-                f"INFO: The GT, generated and residual depth/color images can be found under " +
-                f"{self.output}/vis/")
+                f"INFO: The GT, generated and residual depth/color images can be found under \
+                {self.output}/vis/")
         else:
             print(
-                f"INFO: The GT, generated and residual depth/color images can be found under " +
-                f"{self.output}/tracking_vis/ and {self.output}/mapping_vis/")
+                f"INFO: The GT, generated and residual depth/color images can be found under \
+                {self.output}/tracking_vis/ and {self.output}/mapping_vis/")
         print(f"INFO: The mesh can be found under {self.output}/mesh/")
         print(f"INFO: The checkpoint can be found under {self.output}/ckpt/")
 
@@ -144,10 +146,10 @@ class NICE_SLAM():
         # scale the bound if there is a global scaling factor
         self.bound = torch.from_numpy(
             np.array(cfg['mapping']['bound'])*self.scale)
-        bound_divisible = cfg['grid_len']['bound_divisible']
-        # enlarge the bound a bit to allow it divisible by bound_divisible
+        bound_divisable = cfg['grid_len']['bound_divisable']
+        # enlarge the bound a bit to allow it divisable by bound_divisable
         self.bound[:, 1] = (((self.bound[:, 1]-self.bound[:, 0]) /
-                            bound_divisible).int()+1)*bound_divisible+self.bound[:, 0]
+                            bound_divisable).int()+1)*bound_divisable+self.bound[:, 0]
         if self.nice:
             self.shared_decoders.bound = self.bound
             self.shared_decoders.middle_decoder.bound = self.bound
@@ -158,7 +160,7 @@ class NICE_SLAM():
 
     def load_pretrain(self, cfg):
         """
-        Load parameters of pretrained ConvOnet checkpoints to the decoders.
+        Load parameters of pretrained ConvOnet checkpoints to the decoders 
 
         Args:
             cfg (dict): parsed config dict
@@ -206,45 +208,68 @@ class NICE_SLAM():
         color_grid_len = cfg['grid_len']['color']
         self.color_grid_len = color_grid_len
 
+        #TODO MODIFY c
         c = {}
         c_dim = cfg['model']['c_dim']
         xyz_len = self.bound[:, 1]-self.bound[:, 0]
-
-        # If you have questions regarding the swap of axis 0 and 2,
-        # please refer to https://github.com/cvg/nice-slam/issues/24
 
         if self.coarse:
             coarse_key = 'grid_coarse'
             coarse_val_shape = list(
                 map(int, (xyz_len*self.coarse_bound_enlarge/coarse_grid_len).tolist()))
-            coarse_val_shape[0], coarse_val_shape[2] = coarse_val_shape[2], coarse_val_shape[0]
+            # coarse_val_shape[0], coarse_val_shape[2] = coarse_val_shape[2], coarse_val_shape[0]
             self.coarse_val_shape = coarse_val_shape
             val_shape = [1, c_dim, *coarse_val_shape]
-            coarse_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+            # change the coarse_val
+            # coarse_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+            
+            self.grid_init_size = val_shape[-3]*val_shape[-2]*val_shape[-1]
+            
+            coarse_val = VoxelHashingMap(val_shape[-3:], self.grid_init_size, c_dim,self.bound[:,0],coarse_grid_len, "coarseMap")
             c[coarse_key] = coarse_val
 
         middle_key = 'grid_middle'
         middle_val_shape = list(map(int, (xyz_len/middle_grid_len).tolist()))
-        middle_val_shape[0], middle_val_shape[2] = middle_val_shape[2], middle_val_shape[0]
+        # middle_val_shape[0], middle_val_shape[2] = middle_val_shape[2], middle_val_shape[0]
         self.middle_val_shape = middle_val_shape
         val_shape = [1, c_dim, *middle_val_shape]
-        middle_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+        # middle_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+        
+        self.grid_init_size = val_shape[-3]*val_shape[-2]*val_shape[-1]
+        
+        middle_val = VoxelHashingMap(val_shape[-3:], self.grid_init_size, c_dim, self.bound[:,0], middle_grid_len,"middleMap")
+        
+        middle_val.if_invalid_allocate(torch.arange(0,self.grid_init_size,2))
         c[middle_key] = middle_val
 
         fine_key = 'grid_fine'
         fine_val_shape = list(map(int, (xyz_len/fine_grid_len).tolist()))
-        fine_val_shape[0], fine_val_shape[2] = fine_val_shape[2], fine_val_shape[0]
+        # fine_val_shape[0], fine_val_shape[2] = fine_val_shape[2], fine_val_shape[0]
         self.fine_val_shape = fine_val_shape
         val_shape = [1, c_dim, *fine_val_shape]
-        fine_val = torch.zeros(val_shape).normal_(mean=0, std=0.0001)
+        # fine_val = torch.zeros(val_shape).normal_(mean=0, std=0.0001)
+        
+        self.grid_init_size = val_shape[-3]*val_shape[-2]*val_shape[-1]
+        
+        fine_val = VoxelHashingMap(val_shape[-3:], self.grid_init_size, c_dim, self.bound[:,0], fine_grid_len, "fineMap")
+        
+        fine_val.if_invalid_allocate(torch.arange(0,self.grid_init_size,2))
+        
         c[fine_key] = fine_val
 
         color_key = 'grid_color'
         color_val_shape = list(map(int, (xyz_len/color_grid_len).tolist()))
-        color_val_shape[0], color_val_shape[2] = color_val_shape[2], color_val_shape[0]
+        # color_val_shape[0], color_val_shape[2] = color_val_shape[2], color_val_shape[0]
         self.color_val_shape = color_val_shape
         val_shape = [1, c_dim, *color_val_shape]
-        color_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+        # color_val = torch.zeros(val_shape).normal_(mean=0, std=0.01)
+        
+        self.grid_init_size = val_shape[-3]*val_shape[-2]*val_shape[-1]
+        
+        color_val = VoxelHashingMap(val_shape[-3:], self.grid_init_size, c_dim, self.bound[:,0], color_grid_len, "colorMap")
+        
+        color_val.if_invalid_allocate(torch.arange(0,self.grid_init_size,2))
+        
         c[color_key] = color_val
 
         self.shared_c = c
@@ -257,9 +282,10 @@ class NICE_SLAM():
             rank (int): Thread ID.
         """
 
-        # should wait until the mapping of first frame is finished
+        # should wait until the mapping of first frame is finished    
         while (1):
             if self.mapping_first_frame[0] == 1:
+                print("tracker start")
                 break
             time.sleep(1)
 
@@ -298,6 +324,7 @@ class NICE_SLAM():
                 p = mp.Process(target=self.mapping, args=(rank, ))
             elif rank == 2:
                 if self.coarse:
+                    continue
                     p = mp.Process(target=self.coarse_mapping, args=(rank, ))
                 else:
                     continue
@@ -305,6 +332,9 @@ class NICE_SLAM():
             processes.append(p)
         for p in processes:
             p.join()
+
+# ref may be useful:
+# https://stackoverflow.com/questions/59525805/torch-multiprocessing-queue-yields-no-speedup
 
 
 # This part is required by torch.multiprocessing

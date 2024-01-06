@@ -1,7 +1,9 @@
 import argparse
+import glob
 import os
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import cv2
@@ -28,6 +30,9 @@ if __name__ == '__main__':
     parser.set_defaults(nice=True)
     parser.add_argument('--save_rendering',
                         action='store_true', help='save rendering video to `vis.mp4` in output folder ')
+    # TODO : remove render_every_frame
+    parser.add_argument('--render_every_frame',
+                        action='store_true', help='render_every_frame, sync, good for comaprision, remove it in code release')
     parser.add_argument('--vis_input_frame',
                         action='store_true', help='visualize input frames')
     parser.add_argument('--no_gt_traj',
@@ -58,11 +63,11 @@ if __name__ == '__main__':
     gt_c2w_list = gt_c2w_list.cpu().numpy()
 
     frontend = SLAMFrontend(output, init_pose=estimate_c2w_list[0], cam_scale=0.3,
-                            save_rendering=args.save_rendering, near=0,
-                            estimate_c2w_list=estimate_c2w_list, gt_c2w_list=gt_c2w_list).start()
+                            save_rendering=args.save_rendering, near=0, estimate_c2w_list=estimate_c2w_list, gt_c2w_list=gt_c2w_list, render_every_frame=args.render_every_frame).start()
 
     for i in tqdm(range(0, N+1)):
-        # show every second frame for speed up
+
+        # show every second frame to speed up
         if args.vis_input_frame and i % 2 == 0:
             idx, gt_color, gt_depth, gt_c2w = frame_reader[i]
             depth_np = gt_depth.numpy()
@@ -83,14 +88,22 @@ if __name__ == '__main__':
         frontend.update_pose(1, estimate_c2w_list[i], gt=False)
         if not args.no_gt_traj:
             frontend.update_pose(1, gt_c2w_list[i], gt=True)
-        # the visualizer might get stucked if update every frame
-        # with a long sequence (10000+ frames)
+        # the visualier might get stucked if update every frame with a long sequence (10000+ frames)
         if i % 10 == 0:
             frontend.update_cam_trajectory(i, gt=False)
             if not args.no_gt_traj:
                 frontend.update_cam_trajectory(i, gt=True)
 
     if args.save_rendering:
-        time.sleep(1)
+        if args.render_every_frame:
+            while len(glob.glob(f'{output}/tmp_rendering/*.jpg')) < N:
+                time.sleep(1)
+
         os.system(
             f"/usr/bin/ffmpeg -f image2 -r 30 -pattern_type glob -i '{output}/tmp_rendering/*.jpg' -y {output}/vis.mp4")
+
+        # TODO: remove this
+        os.system(
+            f"cp {output}/vis.mp4 vis.mp4")
+        # os.system(
+        #     f"cp -r {output}/tmp_rendering .")

@@ -4,7 +4,7 @@ grid_len:
   middle: 0.16
   fine: 0.08
   color: 0.08
-  bound_divisible: 0.32
+  bound_divisable: 0.32
 tracking:
   vis_freq: 50
   vis_inside_freq: 25
@@ -13,7 +13,7 @@ tracking:
   seperate_LR: True
   const_speed_assumption: True
   gt_camera: False
-  lr: 0.005
+  lr: 0.005     
   pixels: 5000
   iters: 200
 mapping:

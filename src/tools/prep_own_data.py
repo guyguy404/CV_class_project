@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--ouput_config', type=str, help='Path to config file.')
 parser.add_argument('--scene_folder', type=str,
-                    help='Path to the folder containing extracted frames and Open3d reconstruction of the scene')
+                    help='Path to the folder containing extracted frames and Open3d reconstruction of a scene')
 args = parser.parse_args()
 
 config = {}

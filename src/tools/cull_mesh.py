@@ -1,9 +1,7 @@
-import argparse
-
 import numpy as np
+import argparse
 import torch
 import trimesh
-from tqdm import tqdm
 
 
 def load_poses(path):
@@ -40,13 +38,14 @@ scale = 6553.5
 
 poses = load_poses(args.traj)
 n_imgs = len(poses)
+print(n_imgs)
 mesh = trimesh.load(args.input_mesh, process=False)
 pc = mesh.vertices
 faces = mesh.faces
 
 # delete mesh vertices that are not inside any camera's viewing frustum
 whole_mask = np.ones(pc.shape[0]).astype(np.bool)
-for i in tqdm(range(0, n_imgs, 1)):
+for i in range(0, n_imgs, 1):
     c2w = poses[i]
     points = pc.copy()
     points = torch.from_numpy(points).cuda()

@@ -9,13 +9,13 @@ grid_len:
   middle: 0.32 
   fine: 0.16
   color: 0.16
-  bound_divisible: 0.32
+  bound_divisable: 0.32
 pretrained_decoders:
   coarse: pretrained/coarse.pt
   middle_fine: pretrained/middle_fine.pt # one ckpt contain both middle and fine
 meshing:
   level_set: 10
-  resolution: 256 # change to 512 for higher resolution geometry
+  resolution: 512
   eval_rec: False
   clean_mesh: True
   depth_test: False

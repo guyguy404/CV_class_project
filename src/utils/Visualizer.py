@@ -7,18 +7,18 @@ from src.common import get_camera_from_tensor
 
 class Visualizer(object):
     """
-    Visualize intermediate results, render out depth, color and depth uncertainty images.
-    It can be called per iteration, which is good for debugging (to see how each tracking/mapping iteration performs).
+    Visualize itermediate results, render out depth, color and depth uncertainty images.
+    It can be called per iteration, which is good for debuging (to see how each tracking/mapping iteration performs).
 
     """
 
     def __init__(self, freq, inside_freq, vis_dir, renderer, verbose, device='cuda:0'):
         self.freq = freq
-        self.device = device
-        self.vis_dir = vis_dir
-        self.verbose = verbose
-        self.renderer = renderer
         self.inside_freq = inside_freq
+        self.vis_dir = vis_dir
+        self.device = device
+        self.renderer = renderer
+        self.verbose = verbose
         os.makedirs(f'{vis_dir}', exist_ok=True)
 
     def vis(self, idx, iter, gt_depth, gt_color, c2w_or_camera_tensor, c,

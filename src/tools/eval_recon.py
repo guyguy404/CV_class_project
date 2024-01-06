@@ -34,6 +34,27 @@ def accuracy(gt_points, rec_points):
     acc = np.mean(distances)
     return acc
 
+def recall(gt_points, rec_points, threshold):
+    gt_points_kd_tree = KDTree(rec_points)
+    distances, _ = gt_points_kd_tree.query(gt_points)
+    positive = np.mean((distances<=threshold).astype(np.float))
+    
+    return positive
+   
+
+def precision(gt_points, rec_points, threshold):
+    gt_points_kd_tree = KDTree(gt_points)
+    distances, _ = gt_points_kd_tree.query(rec_points)
+    positive = np.mean((distances<=threshold).astype(np.float))
+    
+    
+    return positive
+
+
+def f1_score(recall, precision):
+    f1 = 2*precision*recall/(recall+precision)
+    return f1
+
 
 def completion(gt_points, rec_points):
     gt_points_kd_tree = KDTree(rec_points)
@@ -109,12 +130,18 @@ def calc_3d_metric(rec_meshfile, gt_meshfile, align=True):
     completion_rec = completion(gt_pc_tri.vertices, rec_pc_tri.vertices)
     completion_ratio_rec = completion_ratio(
         gt_pc_tri.vertices, rec_pc_tri.vertices)
+    recall_rec = recall(gt_pc_tri.vertices, rec_pc_tri.vertices,threshold=0.05)
+    prec_rec = precision(gt_pc_tri.vertices, rec_pc_tri.vertices,threshold=0.05)
+    f1 = f1_score(recall_rec, prec_rec)
     accuracy_rec *= 100  # convert to cm
     completion_rec *= 100  # convert to cm
     completion_ratio_rec *= 100  # convert to %
     print('accuracy: ', accuracy_rec)
     print('completion: ', completion_rec)
     print('completion ratio: ', completion_ratio_rec)
+    print('recall: ', recall_rec)
+    print('precision: ', prec_rec)
+    print('f1 score: ', f1)
 
 
 def get_cam_position(gt_meshfile):

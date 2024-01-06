@@ -241,9 +241,8 @@ def convert_poses(c2w_list, N, scale, gt=True):
     mask = torch.ones(N+1).bool()
     for idx in range(0, N+1):
         if gt:
-            # some frame have `nan` or `inf` in gt pose of ScanNet, 
-            # but our system have estimated camera pose for all frames
-            # therefore, when calculating the pose error, we need to mask out invalid pose
+            # some frame have  `nan` or `inf` in gt pose of ScanNet, but our system have estimated camera pose
+            # therefore, when calculating the pose error, we need to mask out those pose
             if torch.isinf(c2w_list[idx]).any():
                 mask[idx] = 0
                 continue
@@ -258,7 +257,7 @@ def convert_poses(c2w_list, N, scale, gt=True):
 
 if __name__ == '__main__':
     """
-    This ATE evaluation code is modified upon the evaluation code in lie-torch.
+    This ATE evaluation code is modified upon the evaluation code in TUM RGB-D dataset.
     """
 
     parser = argparse.ArgumentParser(

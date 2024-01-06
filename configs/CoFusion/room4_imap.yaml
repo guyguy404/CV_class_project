@@ -1,4 +1,4 @@
-inherit_from: configs/CoFusion/cofusion_imap.yaml
+inherit_from: configs/CoFusion/upper_imap.yaml
 mapping:
   bound: [[-4.5, 3.5],[-1.5,2.0],[-3.0,2.5]]
   marching_cubes_bound: [[-4.5, 3.5],[-1.5,2.0],[-3.0,2.5]]

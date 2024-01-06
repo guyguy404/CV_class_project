@@ -87,6 +87,7 @@ class Mesher(object):
             forecast_mask = torch.zeros((points.shape[0])).bool().to(device)
             if get_mask_use_all_frames:
                 for i in range(0, idx + 1, 1):
+                    print(i)
                     c2w = estimate_c2w_list[i].cpu().numpy()
                     w2c = np.linalg.inv(c2w)
                     w2c = torch.from_numpy(w2c).to(device).float()
@@ -131,9 +132,10 @@ class Mesher(object):
                     ones = torch.ones_like(
                         points[:, 0]).reshape(-1, 1).to(device)
                     homo_points = torch.cat([points, ones], dim=1).reshape(
-                        -1, 4, 1).to(device).float()
+                        -1, 4, 1).to(device).float()  # (N, 4)
+                    # (N, 4, 1)=(4,4)*(N, 4, 1)
                     cam_cord_homo = w2c @ homo_points
-                    cam_cord = cam_cord_homo[:, :3]
+                    cam_cord = cam_cord_homo[:, :3]  # (N, 3, 1)
 
                     K = torch.from_numpy(
                         np.array([[fx, .0, cx], [.0, fy, cy],
@@ -157,9 +159,6 @@ class Mesher(object):
                         gt_depth = keyframe['depth'].to(
                             device).reshape(1, 1, H, W)
                         vgrid = uv.reshape(1, 1, -1, 2)
-                        # normalized to [-1, 1]
-                        vgrid[..., 0] = (vgrid[..., 0] / (W-1) * 2.0 - 1.0)
-                        vgrid[..., 1] = (vgrid[..., 1] / (H-1) * 2.0 - 1.0)
                         depth_sample = F.grid_sample(
                             gt_depth, vgrid, padding_mode='zeros', align_corners=True)
                         depth_sample = depth_sample.reshape(-1)
@@ -302,13 +301,15 @@ class Mesher(object):
             mask_y = (pi[:, 1] < bound[1][1]) & (pi[:, 1] > bound[1][0])
             mask_z = (pi[:, 2] < bound[2][1]) & (pi[:, 2] > bound[2][0])
             mask = mask_x & mask_y & mask_z
-
+            
+            ret = torch.zeros([pi.shape[0],4]).to(device)
+            pi = pi[mask]
             pi = pi.unsqueeze(0)
+            
             if self.nice:
-                ret = decoders(pi, c_grid=c, stage=stage)
-            else:
-                ret = decoders(pi, c_grid=None)
-            ret = ret.squeeze(0)
+                ret_temp = decoders(pi, c_grid=c, stage=stage)
+                ret[mask] = ret_temp.squeeze(0)
+                
             if len(ret.shape) == 1 and ret.shape[0] == 4:
                 ret = ret.unsqueeze(0)
 
@@ -337,7 +338,6 @@ class Mesher(object):
                         resolution)
         z = np.linspace(bound[2][0] - padding, bound[2][1] + padding,
                         resolution)
-
         xx, yy, zz = np.meshgrid(x, y, z)
         grid_points = np.vstack([xx.ravel(), yy.ravel(), zz.ravel()]).T
         grid_points = torch.tensor(np.vstack(
@@ -378,11 +378,9 @@ class Mesher(object):
                 whether to use all frames or just keyframes when getting the seen/unseen mask. Defaults to False.
         """
         with torch.no_grad():
-
             grid = self.get_grid_uniform(self.resolution)
             points = grid['grid_points']
             points = points.to(device)
-
             if show_forecast:
 
                 seen_mask, forecast_mask, unseen_mask = self.point_masks(
@@ -422,6 +420,7 @@ class Mesher(object):
                     keyframe_dict, self.scale)
                 z = []
                 mask = []
+                print(points.shape)
                 for i, pnts in enumerate(torch.split(points, self.points_batch_size, dim=0)):
                     mask.append(mesh_bound.contains(pnts.cpu().numpy()))
                 mask = np.concatenate(mask, axis=0)
@@ -435,6 +434,7 @@ class Mesher(object):
             z = z.astype(np.float32)
 
             try:
+                
                 if version.parse(
                         skimage.__version__) > version.parse('0.15.0'):
                     # for new version as provided in environment.yaml
@@ -545,9 +545,16 @@ class Mesher(object):
                         rays_d_batch = rays_d[i:i+batch_size]
                         rays_o_batch = rays_o[i:i+batch_size]
                         gt_depth_batch = gt_depth[i:i+batch_size]
-                        depth, uncertainty, color = self.renderer.render_batch_ray(
-                            c, decoders, rays_d_batch, rays_o_batch, device, 
-                            stage='color', gt_depth=gt_depth_batch)
+                        # depth, uncertainty, color = self.renderer.render_batch_ray(
+                        #     c, decoders, rays_d_batch, rays_o_batch, device, 
+                        #     stage='color', gt_depth=gt_depth_batch)
+
+
+                        pointsf,z_vals,_ = self.renderer.sample_batch_ray( rays_d_batch, rays_o_batch, device, stage='color', gt_depth=gt_depth_batch)
+                        depth, uncertainty, color = self.renderer.render_batch_ray(c, decoders, device, 'color',
+                                                                                   pointsf,z_vals,rays_o_batch,rays_d_batch,
+                                                                                   gt_depth=gt_depth_batch)
+
                         color_list.append(color)
                     color = torch.cat(color_list, dim=0)
                     vertex_colors = color.cpu().numpy()

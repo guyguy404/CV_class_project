@@ -4,9 +4,9 @@ import os
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
-from src.common import as_intrinsics_matrix
 from torch.utils.data import Dataset
+
+from src.common import as_intrinsics_matrix
 
 
 def readEXR_onlydepth(filename):
@@ -19,9 +19,6 @@ def readEXR_onlydepth(filename):
     Returns:
         Y (numpy.array): Depth buffer in float32 format.
     """
-    # move the import here since only CoFusion needs these package
-    # sometimes installation of openexr is hard, you can run all other datasets
-    # even without openexr
     import Imath
     import OpenEXR as exr
 
@@ -46,7 +43,6 @@ def readEXR_onlydepth(filename):
 
 def get_dataset(cfg, args, scale, device='cuda:0'):
     return dataset_dict[cfg['dataset']](cfg, args, scale, device=device)
-
 
 class BaseDataset(Dataset):
     def __init__(self, cfg, args, scale, device='cuda:0'
@@ -96,6 +92,7 @@ class BaseDataset(Dataset):
         depth_data = torch.from_numpy(depth_data)*self.scale
         if self.crop_size is not None:
             # follow the pre-processing step in lietorch, actually is resize
+            import torch.nn.functional as F
             color_data = color_data.permute(2, 0, 1)
             color_data = F.interpolate(
                 color_data[None], self.crop_size, mode='bilinear', align_corners=True)[0]
@@ -176,7 +173,6 @@ class Azure(BaseDataset):
                 c2w = np.eye(4)
                 c2w = torch.from_numpy(c2w).float()
                 self.poses.append(c2w)
-
 
 class ScanNet(BaseDataset):
     def __init__(self, cfg, args, scale, device='cuda:0'

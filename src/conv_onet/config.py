@@ -13,7 +13,7 @@ def get_model(cfg,  nice=True):
         decoder (nn.module): the network model.
     """
 
-    dim = cfg['data']['dim']
+    dim = cfg['data']['dim']  # dim is the dimension for position
     coarse_grid_len = cfg['grid_len']['coarse']
     middle_grid_len = cfg['grid_len']['middle']
     fine_grid_len = cfg['grid_len']['fine']
@@ -22,8 +22,8 @@ def get_model(cfg,  nice=True):
     pos_embedding_method = cfg['model']['pos_embedding_method']
     if nice:
         decoder = models.decoder_dict['nice'](
-            dim=dim, c_dim=c_dim, coarse=cfg['coarse'], coarse_grid_len=coarse_grid_len,
-            middle_grid_len=middle_grid_len, fine_grid_len=fine_grid_len,
+            dim=dim, c_dim=c_dim, coarse=cfg['coarse'], coarse_grid_len=coarse_grid_len, 
+            middle_grid_len=middle_grid_len, fine_grid_len=fine_grid_len, 
             color_grid_len=color_grid_len, pos_embedding_method=pos_embedding_method)
     else:
         decoder = models.decoder_dict['imap'](

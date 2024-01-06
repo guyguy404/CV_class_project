@@ -1,9 +1,9 @@
 dataset: 'scannet'
-sync_method: loose
+sync_method: strict
 coarse: True
 verbose: False
 meshing:
-  resolution: 256
+  resolution: 512
 tracking:
   vis_freq: 50
   vis_inside_freq: 25
@@ -13,18 +13,18 @@ tracking:
   const_speed_assumption: True
   lr: 0.0005      
   pixels: 1000
-  iters: 30
+  iters: 50
 mapping:
-  every_frame: 10
+  every_frame: 5
   vis_freq: 50
-  vis_inside_freq: 30
+  vis_inside_freq: 25
   mesh_freq: 50
-  ckpt_freq: 500
+  ckpt_freq: 50
   keyframe_every: 50
   mapping_window_size: 10
   pixels: 1000
   iters_first: 400
-  iters: 10
+  iters: 400
   bound: [[0.0,6.5],[0.0,4.0],[0,3.5]]
   marching_cubes_bound: [[0.0,6.5],[0.0,4.0],[0,3.5]]
 cam: 

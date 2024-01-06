@@ -8,7 +8,7 @@ tracking:
   ignore_edge_H: 100
   seperate_LR: False
   const_speed_assumption: True
-  lr: 0.0005
+  lr: 0.002
   pixels: 5000
   iters: 50
 mapping:

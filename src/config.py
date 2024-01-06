@@ -6,7 +6,6 @@ method_dict = {
     'conv_onet': conv_onet
 }
 
-
 def load_config(path, default_path=None):
     """
     Loads config file.
@@ -17,8 +16,8 @@ def load_config(path, default_path=None):
 
     Returns:
         cfg (dict): config dict.
-
-    """
+        
+    """    
     # load configuration from file itself
     with open(path, 'r') as f:
         cfg_special = yaml.full_load(f)
@@ -49,7 +48,7 @@ def update_recursive(dict1, dict2):
     Args:
         dict1 (dict): first dictionary to be updated.
         dict2 (dict): second dictionary which entries should be used.
-    """
+    """    
     for k, v in dict2.items():
         if k not in dict1:
             dict1[k] = dict()
@@ -70,8 +69,8 @@ def get_model(cfg, nice=True):
 
     Returns:
        model (nn.module): network model.
-    """
-
+    """    
+    
     method = 'conv_onet'
     model = method_dict[method].config.get_model(
         cfg,  nice=nice)
